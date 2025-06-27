@@ -21,6 +21,9 @@ export default function HomePage() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoDebugInfo, setVideoDebugInfo] = useState<any>(null);
 
+  // Auth state for video generation
+  const [showAuthForVideo, setShowAuthForVideo] = useState(false);
+
   // Poll for video generation status
   useEffect(() => {
     if (!predictionId) return;
@@ -95,6 +98,7 @@ export default function HomePage() {
     setVideoOutput(null);
     setVideoError(null);
     setPredictionId(null);
+    setShowAuthForVideo(false);
 
     try {
       const response = await fetch('/api/enhance', {
@@ -123,6 +127,12 @@ export default function HomePage() {
   };
 
   const handleApprovePrompt = () => {
+    if (!user) {
+      // Show auth form if user not logged in
+      setShowAuthForVideo(true);
+      return;
+    }
+    
     if (enhancedPrompt) {
       // TODO: Add payment step here before generating video
       generateVideo(enhancedPrompt);
@@ -134,6 +144,15 @@ export default function HomePage() {
     setEnhancedPrompt(null);
     setError(null);
     setPrompt(submittedPrompt || '');
+    setShowAuthForVideo(false);
+  };
+
+  const handleAuthSuccess = () => {
+    // After successful login, hide auth form and proceed with video generation
+    setShowAuthForVideo(false);
+    if (enhancedPrompt) {
+      generateVideo(enhancedPrompt);
+    }
   };
 
   // Show loading state
@@ -148,33 +167,20 @@ export default function HomePage() {
     );
   }
 
-  // Show auth form if not logged in
-  if (!user) {
-    return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">
-              ASMR Video Generator
-            </h1>
-            <p className="text-gray-600">
-              Sign in to start creating beautiful ASMR videos
-            </p>
-          </div>
-          <AuthForm />
-        </div>
-      </div>
-    );
-  }
-
-  // Show video generator for authenticated users
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-8">
         ASMR Video Generator
       </h1>
       
-      {!enhancedPrompt && (
+      {/* Show subtitle based on auth status */}
+      {!user && (
+        <p className="text-gray-600 mb-6 text-center max-w-md">
+          Try enhancing your prompt for free! Sign in when you're ready to generate your video.
+        </p>
+      )}
+      
+      {!enhancedPrompt && !showAuthForVideo && (
         <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
           <label htmlFor="prompt" className="text-lg font-medium">Enter your ASMR video idea:</label>
           <input
@@ -191,9 +197,28 @@ export default function HomePage() {
             disabled={isLoading}
             className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
           >
-            {isLoading ? 'Enhancing Prompt...' : 'Enhance Prompt'}
+            {isLoading ? 'Enhancing Prompt...' : '✨ Enhance Prompt (Free)'}
           </button>
         </form>
+      )}
+
+      {/* Show auth form when user wants to generate video but isn't logged in */}
+      {showAuthForVideo && (
+        <div className="w-full max-w-md">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold text-blue-800 mb-2">Ready to generate your video?</h3>
+            <p className="text-blue-700 text-sm">
+              Sign in to continue with video generation ($6.00)
+            </p>
+          </div>
+          <AuthForm onSuccess={handleAuthSuccess} />
+          <button
+            onClick={() => setShowAuthForVideo(false)}
+            className="w-full mt-4 bg-gray-500 text-white px-4 py-2 rounded font-semibold hover:bg-gray-600 transition"
+          >
+            ← Back to Review
+          </button>
+        </div>
       )}
 
       {/* Debugging UI */}
@@ -227,7 +252,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {enhancedPrompt && !isGeneratingVideo && !videoOutput && (
+        {enhancedPrompt && !isGeneratingVideo && !videoOutput && !showAuthForVideo && (
           <div className="p-4 bg-green-50 border border-green-200 rounded">
             <h3 className="font-semibold text-green-800 mb-4">✨ Enhanced Prompt Ready for Review:</h3>
             <div className="bg-white p-3 rounded border mb-4">
@@ -237,13 +262,18 @@ export default function HomePage() {
               <p className="text-yellow-800 text-sm">
                 💰 <strong>Cost:</strong> $6.00 per video generation
               </p>
+              {!user && (
+                <p className="text-yellow-800 text-sm mt-1">
+                  🔐 Sign in required for video generation
+                </p>
+              )}
             </div>
             <div className="flex gap-3">
               <button
                 onClick={handleApprovePrompt}
                 className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition"
               >
-                🎬 Pay $6 & Generate Video
+                {user ? '🎬 Pay $6 & Generate Video' : '🔐 Sign In to Generate Video'}
               </button>
               <button
                 onClick={handleEditPrompt}

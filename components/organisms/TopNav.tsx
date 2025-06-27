@@ -48,7 +48,7 @@ export default function TopNav() {
               </>
             ) : (
               <span className="text-sm text-gray-600">
-                Please sign in to create videos
+                Try prompt enhancement free • Sign in to generate videos
               </span>
             )}
           </div>
