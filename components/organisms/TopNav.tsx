@@ -12,15 +12,7 @@ export default function TopNav() {
             </Link>
           </div>
           <div className="flex space-x-8">
-            <Link href="/page1" className="flex items-center text-foreground hover:text-primary">
-              Page 1
-            </Link>
-            <Link href="/page2" className="flex items-center text-foreground hover:text-primary">
-              Page 2
-            </Link>
-            <Link href="/page3" className="flex items-center text-foreground hover:text-primary">
-              Page 3
-            </Link>
+            {/* Navigation links removed - keeping just Home for now */}
           </div>
         </div>
       </div>
