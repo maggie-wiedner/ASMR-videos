@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth-context';
-import AuthForm from '../components/auth/AuthForm';
+import AuthFlowModal from '../components/auth/AuthFlowModal';
+import { supabase } from '../lib/supabase';
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -21,8 +22,42 @@ export default function HomePage() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoDebugInfo, setVideoDebugInfo] = useState<any>(null);
 
-  // Auth state for video generation
-  const [showAuthForVideo, setShowAuthForVideo] = useState(false);
+  // Access control state
+  const [hasAccess, setHasAccess] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(false);
+  const [paymentModalDismissed, setPaymentModalDismissed] = useState(false);
+
+  // Check if user has paid for access
+  useEffect(() => {
+    const checkUserAccess = async () => {
+      if (!user) {
+        setHasAccess(false);
+        return;
+      }
+
+      setCheckingAccess(true);
+      try {
+        const { data, error } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('status', 'completed')
+          .limit(1);
+
+        if (error) {
+          console.error('Error checking access:', error);
+        } else {
+          setHasAccess(data && data.length > 0);
+        }
+      } catch (err) {
+        console.error('Error checking access:', err);
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+
+    checkUserAccess();
+  }, [user]);
 
   // Poll for video generation status
   useEffect(() => {
@@ -49,7 +84,7 @@ export default function HomePage() {
       }
     };
 
-    const interval = setInterval(pollStatus, 2000); // Poll every 2 seconds
+    const interval = setInterval(pollStatus, 2000);
     return () => clearInterval(interval);
   }, [predictionId]);
 
@@ -98,7 +133,6 @@ export default function HomePage() {
     setVideoOutput(null);
     setVideoError(null);
     setPredictionId(null);
-    setShowAuthForVideo(false);
 
     try {
       const response = await fetch('/api/enhance', {
@@ -117,7 +151,6 @@ export default function HomePage() {
       } else {
         setEnhancedPrompt(data.enhancedPrompt);
         setDebugInfo(data.debug);
-        // REMOVED: Automatic video generation - now user must approve first
       }
     } catch (err: any) {
       setError('Network error: ' + err.message);
@@ -126,37 +159,22 @@ export default function HomePage() {
     }
   };
 
-  const handleApprovePrompt = () => {
-    if (!user) {
-      // Show auth form if user not logged in
-      setShowAuthForVideo(true);
-      return;
-    }
-    
+  const handleGenerateVideo = () => {
     if (enhancedPrompt) {
-      // TODO: Add payment step here before generating video
       generateVideo(enhancedPrompt);
     }
   };
 
   const handleEditPrompt = () => {
-    // Allow user to go back and edit
     setEnhancedPrompt(null);
     setError(null);
     setPrompt(submittedPrompt || '');
-    setShowAuthForVideo(false);
   };
 
-  const handleAuthSuccess = () => {
-    // After successful login, hide auth form and proceed with video generation
-    setShowAuthForVideo(false);
-    if (enhancedPrompt) {
-      generateVideo(enhancedPrompt);
-    }
-  };
+
 
   // Show loading state
-  if (loading) {
+  if (loading || checkingAccess) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
@@ -172,10 +190,31 @@ export default function HomePage() {
       <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-8">
         ASMR Video Generator
       </h1>
-      
 
-      
-      {!enhancedPrompt && !showAuthForVideo && (
+      {/* Show sign-in prompt if not authenticated */}
+      {!user && (
+        <div className="w-full max-w-md text-center">
+          <AuthFlowModal 
+            buttonText="Sign In"
+            buttonClassName="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
+          />
+        </div>
+      )}
+
+      {/* Show payment required message if user is signed in but hasn't paid */}
+      {user && !hasAccess && (
+        <div className="w-full max-w-md text-center">
+          <AuthFlowModal 
+            buttonText="Get Access - $6.00"
+            buttonClassName="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition"
+            autoOpen={!!(user && !hasAccess && !paymentModalDismissed)}
+            onPaymentModalClosed={() => setPaymentModalDismissed(true)}
+          />
+        </div>
+      )}
+
+      {/* Show the main tool interface if user has paid access */}
+      {user && hasAccess && !enhancedPrompt && (
         <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
           <label htmlFor="prompt" className="text-lg font-medium">Enter your ASMR video idea:</label>
           <input
@@ -192,27 +231,34 @@ export default function HomePage() {
             disabled={isLoading}
             className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
           >
-            {isLoading ? 'Enhancing Prompt...' : '✨ Enhance Prompt (Free)'}
+            {isLoading ? 'Enhancing Prompt...' : '✨ Enhance Prompt'}
           </button>
         </form>
       )}
 
-      {/* Show auth form when user wants to generate video but isn't logged in */}
-      {showAuthForVideo && (
-        <div className="w-full max-w-md">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-blue-800 mb-2">Ready to generate your video?</h3>
-            <p className="text-blue-700 text-sm">
-              Sign in to continue with video generation ($6.00)
-            </p>
+      {/* Enhanced Prompt Review */}
+      {user && hasAccess && enhancedPrompt && !isGeneratingVideo && !videoOutput && (
+        <div className="w-full max-w-2xl">
+          <div className="p-4 bg-green-50 border border-green-200 rounded">
+            <h3 className="font-semibold text-green-800 mb-4">✨ Enhanced Prompt Ready:</h3>
+            <div className="bg-white p-3 rounded border mb-4">
+              <p className="text-gray-800">{enhancedPrompt}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleGenerateVideo}
+                className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition"
+              >
+                🎬 Generate Video
+              </button>
+              <button
+                onClick={handleEditPrompt}
+                className="bg-gray-500 text-white px-4 py-2 rounded font-semibold hover:bg-gray-600 transition"
+              >
+                ✏️ Edit Prompt
+              </button>
+            </div>
           </div>
-          <AuthForm onSuccess={handleAuthSuccess} />
-          <button
-            onClick={() => setShowAuthForVideo(false)}
-            className="w-full mt-4 bg-gray-500 text-white px-4 py-2 rounded font-semibold hover:bg-gray-600 transition"
-          >
-            ← Back to Review
-          </button>
         </div>
       )}
 
@@ -225,16 +271,9 @@ export default function HomePage() {
           </div>
         )}
 
-        {isLoading && (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-            <h3 className="font-semibold text-blue-800 mb-2">Status:</h3>
-            <p className="text-blue-700">Calling OpenAI API to enhance prompt...</p>
-          </div>
-        )}
-
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded">
-            <h3 className="font-semibold text-red-800 mb-2">Prompt Enhancement Error:</h3>
+            <h3 className="font-semibold text-red-800 mb-2">Error:</h3>
             <p className="text-red-700 mb-2">{error}</p>
             {debugInfo && (
               <details className="mt-2">
@@ -244,39 +283,6 @@ export default function HomePage() {
                 </pre>
               </details>
             )}
-          </div>
-        )}
-
-        {enhancedPrompt && !isGeneratingVideo && !videoOutput && !showAuthForVideo && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded">
-            <h3 className="font-semibold text-green-800 mb-4">✨ Enhanced Prompt Ready for Review:</h3>
-            <div className="bg-white p-3 rounded border mb-4">
-              <p className="text-gray-800">{enhancedPrompt}</p>
-            </div>
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded mb-4">
-              <p className="text-yellow-800 text-sm">
-                💰 <strong>Cost:</strong> $6.00 per video generation
-              </p>
-              {!user && (
-                <p className="text-yellow-800 text-sm mt-1">
-                  🔐 Sign in required for video generation
-                </p>
-              )}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleApprovePrompt}
-                className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition"
-              >
-                {user ? '🎬 Pay $6 & Generate Video' : '🔐 Sign In to Generate Video'}
-              </button>
-              <button
-                onClick={handleEditPrompt}
-                className="bg-gray-500 text-white px-4 py-2 rounded font-semibold hover:bg-gray-600 transition"
-              >
-                ✏️ Edit Prompt
-              </button>
-            </div>
           </div>
         )}
 
@@ -292,14 +298,6 @@ export default function HomePage() {
             {predictionId && (
               <p className="text-purple-600 text-sm mt-1">Prediction ID: {predictionId}</p>
             )}
-            {videoDebugInfo && (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-purple-600 hover:text-purple-800">Debug Info</summary>
-                <pre className="mt-2 text-xs bg-purple-100 p-2 rounded overflow-auto">
-                  {JSON.stringify(videoDebugInfo, null, 2)}
-                </pre>
-              </details>
-            )}
           </div>
         )}
 
@@ -307,14 +305,6 @@ export default function HomePage() {
           <div className="p-4 bg-red-50 border border-red-200 rounded">
             <h3 className="font-semibold text-red-800 mb-2">Video Generation Error:</h3>
             <p className="text-red-700 mb-2">{videoError}</p>
-            {videoDebugInfo && (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-red-600 hover:text-red-800">Debug Info</summary>
-                <pre className="mt-2 text-xs bg-red-100 p-2 rounded overflow-auto">
-                  {JSON.stringify(videoDebugInfo, null, 2)}
-                </pre>
-              </details>
-            )}
             <button
               onClick={handleEditPrompt}
               className="mt-3 bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
