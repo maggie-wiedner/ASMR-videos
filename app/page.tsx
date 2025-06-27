@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../lib/auth-context';
+import AuthForm from '../components/auth/AuthForm';
 
 export default function HomePage() {
+  const { user, loading } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [submittedPrompt, setSubmittedPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -121,6 +124,7 @@ export default function HomePage() {
 
   const handleApprovePrompt = () => {
     if (enhancedPrompt) {
+      // TODO: Add payment step here before generating video
       generateVideo(enhancedPrompt);
     }
   };
@@ -132,6 +136,38 @@ export default function HomePage() {
     setPrompt(submittedPrompt || '');
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth form if not logged in
+  if (!user) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-4">
+              ASMR Video Generator
+            </h1>
+            <p className="text-gray-600">
+              Sign in to start creating beautiful ASMR videos
+            </p>
+          </div>
+          <AuthForm />
+        </div>
+      </div>
+    );
+  }
+
+  // Show video generator for authenticated users
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-8">
@@ -197,12 +233,17 @@ export default function HomePage() {
             <div className="bg-white p-3 rounded border mb-4">
               <p className="text-gray-800">{enhancedPrompt}</p>
             </div>
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded mb-4">
+              <p className="text-yellow-800 text-sm">
+                💰 <strong>Cost:</strong> $6.00 per video generation
+              </p>
+            </div>
             <div className="flex gap-3">
               <button
                 onClick={handleApprovePrompt}
                 className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition"
               >
-                🎬 Generate Video
+                🎬 Pay $6 & Generate Video
               </button>
               <button
                 onClick={handleEditPrompt}
