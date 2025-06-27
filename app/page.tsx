@@ -277,14 +277,6 @@ export default function HomePage() {
                 ✏️ Edit Prompt
               </button>
             </div>
-            {debugInfo && (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-green-600 hover:text-green-800">Debug Info</summary>
-                <pre className="mt-2 text-xs bg-green-100 p-2 rounded overflow-auto">
-                  {JSON.stringify(debugInfo, null, 2)}
-                </pre>
-              </details>
-            )}
           </div>
         )}
 
