@@ -173,12 +173,7 @@ export default function HomePage() {
         ASMR Video Generator
       </h1>
       
-      {/* Show subtitle based on auth status */}
-      {!user && (
-        <p className="text-gray-600 mb-6 text-center max-w-md">
-          Try enhancing your prompt for free! Sign in when you're ready to generate your video.
-        </p>
-      )}
+
       
       {!enhancedPrompt && !showAuthForVideo && (
         <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
