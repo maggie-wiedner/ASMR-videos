@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../../lib/auth-context';
+import AuthForm from '../auth/AuthForm';
 
 export default function TopNav() {
   const { user, loading, signOut } = useAuth();
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   if (loading) {
     return (
@@ -47,9 +49,32 @@ export default function TopNav() {
                 </button>
               </>
             ) : (
-              <span className="text-sm text-gray-600">
-                Try prompt enhancement free • Sign in to generate videos
-              </span>
+              <>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium transition"
+                >
+                  Sign In
+                </button>
+                
+                {/* Auth Modal */}
+                {showAuthModal && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-xl font-semibold">Sign In</h2>
+                        <button
+                          onClick={() => setShowAuthModal(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <AuthForm onSuccess={() => setShowAuthModal(false)} />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
