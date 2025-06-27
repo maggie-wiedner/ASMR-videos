@@ -47,7 +47,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [predictionId]);
 
-  const generateVideo = async (enhancedPrompt: string) => {
+  const generateVideo = async (promptToUse: string) => {
     setIsGeneratingVideo(true);
     setVideoError(null);
     setVideoOutput(null);
@@ -60,7 +60,7 @@ export default function HomePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ enhancedPrompt }),
+        body: JSON.stringify({ enhancedPrompt: promptToUse }),
       });
 
       const data = await response.json();
@@ -87,6 +87,11 @@ export default function HomePage() {
     setError(null);
     setEnhancedPrompt(null);
     setDebugInfo(null);
+    
+    // Clear video states when starting fresh
+    setVideoOutput(null);
+    setVideoError(null);
+    setPredictionId(null);
 
     try {
       const response = await fetch('/api/enhance', {
@@ -105,9 +110,7 @@ export default function HomePage() {
       } else {
         setEnhancedPrompt(data.enhancedPrompt);
         setDebugInfo(data.debug);
-        
-        // Automatically start video generation after prompt enhancement
-        await generateVideo(data.enhancedPrompt);
+        // REMOVED: Automatic video generation - now user must approve first
       }
     } catch (err: any) {
       setError('Network error: ' + err.message);
@@ -116,30 +119,46 @@ export default function HomePage() {
     }
   };
 
+  const handleApprovePrompt = () => {
+    if (enhancedPrompt) {
+      generateVideo(enhancedPrompt);
+    }
+  };
+
+  const handleEditPrompt = () => {
+    // Allow user to go back and edit
+    setEnhancedPrompt(null);
+    setError(null);
+    setPrompt(submittedPrompt || '');
+  };
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-4xl font-extrabold text-foreground tracking-tight mb-8">
         ASMR Video Generator
       </h1>
-      <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
-        <label htmlFor="prompt" className="text-lg font-medium">Enter your ASMR video idea:</label>
-        <input
-          id="prompt"
-          type="text"
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          className="border rounded px-3 py-2 text-lg"
-          placeholder="e.g. Rain sounds in a cozy cabin"
-          required
-        />
-        <button
-          type="submit"
-          disabled={isLoading || isGeneratingVideo}
-          className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
-        >
-          {isLoading ? 'Enhancing...' : isGeneratingVideo ? 'Generating Video...' : 'Generate Video'}
-        </button>
-      </form>
+      
+      {!enhancedPrompt && (
+        <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
+          <label htmlFor="prompt" className="text-lg font-medium">Enter your ASMR video idea:</label>
+          <input
+            id="prompt"
+            type="text"
+            value={prompt}
+            onChange={e => setPrompt(e.target.value)}
+            className="border rounded px-3 py-2 text-lg"
+            placeholder="e.g. Rain sounds in a cozy cabin"
+            required
+          />
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition disabled:bg-gray-400"
+          >
+            {isLoading ? 'Enhancing Prompt...' : 'Enhance Prompt'}
+          </button>
+        </form>
+      )}
 
       {/* Debugging UI */}
       <div className="w-full max-w-2xl mt-8 space-y-4">
@@ -172,10 +191,26 @@ export default function HomePage() {
           </div>
         )}
 
-        {enhancedPrompt && (
+        {enhancedPrompt && !isGeneratingVideo && !videoOutput && (
           <div className="p-4 bg-green-50 border border-green-200 rounded">
-            <h3 className="font-semibold text-green-800 mb-2">Enhanced Prompt:</h3>
-            <p className="text-green-700 mb-2">{enhancedPrompt}</p>
+            <h3 className="font-semibold text-green-800 mb-4">✨ Enhanced Prompt Ready for Review:</h3>
+            <div className="bg-white p-3 rounded border mb-4">
+              <p className="text-gray-800">{enhancedPrompt}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleApprovePrompt}
+                className="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition"
+              >
+                🎬 Generate Video
+              </button>
+              <button
+                onClick={handleEditPrompt}
+                className="bg-gray-500 text-white px-4 py-2 rounded font-semibold hover:bg-gray-600 transition"
+              >
+                ✏️ Edit Prompt
+              </button>
+            </div>
             {debugInfo && (
               <details className="mt-2">
                 <summary className="cursor-pointer text-green-600 hover:text-green-800">Debug Info</summary>
@@ -190,7 +225,7 @@ export default function HomePage() {
         {/* Video Generation Status */}
         {isGeneratingVideo && (
           <div className="p-4 bg-purple-50 border border-purple-200 rounded">
-            <h3 className="font-semibold text-purple-800 mb-2">Video Generation Status:</h3>
+            <h3 className="font-semibold text-purple-800 mb-2">🎥 Video Generation in Progress:</h3>
             <p className="text-purple-700">
               {videoStatus === 'starting' && 'Starting video generation...'}
               {videoStatus === 'processing' && 'Processing video with Veo3...'}
@@ -198,6 +233,14 @@ export default function HomePage() {
             </p>
             {predictionId && (
               <p className="text-purple-600 text-sm mt-1">Prediction ID: {predictionId}</p>
+            )}
+            {videoDebugInfo && (
+              <details className="mt-2">
+                <summary className="cursor-pointer text-purple-600 hover:text-purple-800">Debug Info</summary>
+                <pre className="mt-2 text-xs bg-purple-100 p-2 rounded overflow-auto">
+                  {JSON.stringify(videoDebugInfo, null, 2)}
+                </pre>
+              </details>
             )}
           </div>
         )}
@@ -214,27 +257,34 @@ export default function HomePage() {
                 </pre>
               </details>
             )}
+            <button
+              onClick={handleEditPrompt}
+              className="mt-3 bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
+            >
+              Try Again
+            </button>
           </div>
         )}
 
         {videoOutput && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded">
-            <h3 className="font-semibold text-green-800 mb-4">Generated Video:</h3>
-            <video 
-              controls 
-              className="w-full max-w-lg mx-auto rounded shadow"
-              src={videoOutput}
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded">
+            <h3 className="font-semibold text-emerald-800 mb-2">🎉 Video Generated Successfully!</h3>
+            <div className="bg-white p-3 rounded border">
+              <video 
+                src={videoOutput} 
+                controls 
+                className="w-full max-w-lg mx-auto rounded"
+                onError={() => setVideoError('Failed to load video')}
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+            <button
+              onClick={handleEditPrompt}
+              className="mt-3 bg-blue-600 text-white px-4 py-2 rounded font-semibold hover:bg-blue-700 transition"
             >
-              Your browser does not support the video tag.
-            </video>
-            {videoDebugInfo && (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-green-600 hover:text-green-800">Debug Info</summary>
-                <pre className="mt-2 text-xs bg-green-100 p-2 rounded overflow-auto">
-                  {JSON.stringify(videoDebugInfo, null, 2)}
-                </pre>
-              </details>
-            )}
+              Create Another Video
+            </button>
           </div>
         )}
       </div>
