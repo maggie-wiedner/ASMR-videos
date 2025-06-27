@@ -8,6 +8,7 @@ import AuthForm from '../auth/AuthForm';
 export default function TopNav() {
   const { user, loading, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   if (loading) {
     return (
@@ -51,7 +52,10 @@ export default function TopNav() {
             ) : (
               <>
                 <button
-                  onClick={() => setShowAuthModal(true)}
+                  onClick={() => {
+                    setIsSignUp(false);
+                    setShowAuthModal(true);
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium transition"
                 >
                   Sign In
@@ -62,7 +66,9 @@ export default function TopNav() {
                   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
                       <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-semibold">Sign In</h2>
+                        <h2 className="text-xl font-semibold">
+                          {isSignUp ? 'Sign Up' : 'Sign In'}
+                        </h2>
                         <button
                           onClick={() => setShowAuthModal(false)}
                           className="text-gray-400 hover:text-gray-600"
@@ -70,7 +76,10 @@ export default function TopNav() {
                           ✕
                         </button>
                       </div>
-                      <AuthForm onSuccess={() => setShowAuthModal(false)} />
+                      <AuthForm 
+                        onSuccess={() => setShowAuthModal(false)}
+                        onToggleMode={(signUpMode) => setIsSignUp(signUpMode)}
+                      />
                     </div>
                   </div>
                 )}

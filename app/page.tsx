@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth-context';
+import AuthForm from '../components/auth/AuthForm';
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -20,7 +21,8 @@ export default function HomePage() {
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoDebugInfo, setVideoDebugInfo] = useState<any>(null);
 
-
+  // Auth state for video generation
+  const [showAuthForVideo, setShowAuthForVideo] = useState(false);
 
   // Poll for video generation status
   useEffect(() => {
@@ -96,6 +98,7 @@ export default function HomePage() {
     setVideoOutput(null);
     setVideoError(null);
     setPredictionId(null);
+    setShowAuthForVideo(false);
 
     try {
       const response = await fetch('/api/enhance', {
@@ -125,8 +128,8 @@ export default function HomePage() {
 
   const handleApprovePrompt = () => {
     if (!user) {
-      // Show message to sign in via the top navigation
-      setError('Please sign in using the button in the top navigation to generate videos.');
+      // Show auth form if user not logged in
+      setShowAuthForVideo(true);
       return;
     }
     
@@ -141,6 +144,15 @@ export default function HomePage() {
     setEnhancedPrompt(null);
     setError(null);
     setPrompt(submittedPrompt || '');
+    setShowAuthForVideo(false);
+  };
+
+  const handleAuthSuccess = () => {
+    // After successful login, hide auth form and proceed with video generation
+    setShowAuthForVideo(false);
+    if (enhancedPrompt) {
+      generateVideo(enhancedPrompt);
+    }
   };
 
   // Show loading state
@@ -163,7 +175,7 @@ export default function HomePage() {
       
 
       
-      {!enhancedPrompt && (
+      {!enhancedPrompt && !showAuthForVideo && (
         <form onSubmit={handleSubmit} className="w-full max-w-md flex flex-col gap-4">
           <label htmlFor="prompt" className="text-lg font-medium">Enter your ASMR video idea:</label>
           <input
@@ -185,7 +197,24 @@ export default function HomePage() {
         </form>
       )}
 
-
+      {/* Show auth form when user wants to generate video but isn't logged in */}
+      {showAuthForVideo && (
+        <div className="w-full max-w-md">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <h3 className="font-semibold text-blue-800 mb-2">Ready to generate your video?</h3>
+            <p className="text-blue-700 text-sm">
+              Sign in to continue with video generation ($6.00)
+            </p>
+          </div>
+          <AuthForm onSuccess={handleAuthSuccess} />
+          <button
+            onClick={() => setShowAuthForVideo(false)}
+            className="w-full mt-4 bg-gray-500 text-white px-4 py-2 rounded font-semibold hover:bg-gray-600 transition"
+          >
+            ← Back to Review
+          </button>
+        </div>
+      )}
 
       {/* Debugging UI */}
       <div className="w-full max-w-2xl mt-8 space-y-4">
@@ -218,7 +247,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {enhancedPrompt && !isGeneratingVideo && !videoOutput && (
+        {enhancedPrompt && !isGeneratingVideo && !videoOutput && !showAuthForVideo && (
           <div className="p-4 bg-green-50 border border-green-200 rounded">
             <h3 className="font-semibold text-green-800 mb-4">✨ Enhanced Prompt Ready for Review:</h3>
             <div className="bg-white p-3 rounded border mb-4">

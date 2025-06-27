@@ -5,15 +5,22 @@ import { supabase } from '../../lib/supabase'
 
 interface AuthFormProps {
   onSuccess?: () => void
+  onToggleMode?: (isSignUp: boolean) => void
 }
 
-export default function AuthForm({ onSuccess }: AuthFormProps) {
+export default function AuthForm({ onSuccess, onToggleMode }: AuthFormProps) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [message, setMessage] = useState('')
+
+  const toggleMode = () => {
+    const newSignUpMode = !isSignUp;
+    setIsSignUp(newSignUpMode);
+    onToggleMode?.(newSignUpMode);
+  }
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true)
@@ -64,10 +71,6 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
 
   return (
     <div className="max-w-md mx-auto bg-white rounded-lg">
-      <h2 className="text-2xl font-bold text-center mb-6">
-        {isSignUp ? 'Sign Up' : 'Sign In'}
-      </h2>
-      
       {/* Google Sign In Button */}
       <button
         onClick={handleGoogleSignIn}
@@ -88,7 +91,7 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
           <div className="w-full border-t border-gray-300" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white text-gray-500">Or continue with email</span>
+          <span className="px-2 bg-white text-gray-500">Or</span>
         </div>
       </div>
       
@@ -144,7 +147,7 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
       <div className="mt-4 text-center">
         <button
           type="button"
-          onClick={() => setIsSignUp(!isSignUp)}
+          onClick={toggleMode}
           className="text-blue-600 hover:text-blue-800 text-sm"
         >
           {isSignUp 
