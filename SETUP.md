@@ -86,15 +86,41 @@ CREATE TRIGGER update_user_videos_updated_at BEFORE UPDATE ON user_videos
 3. Copy your **Project URL** and **anon/public key**
 4. Add them to your `.env.local` file
 
-## 4. Authentication Setup
+## 4. Google OAuth Setup
 
-Authentication is already configured! Users can:
-- Sign up with email/password
-- Sign in to access the video generator
-- Sign out from the navigation
+### Step 1: Create Google OAuth Credentials
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable the **Google+ API**
+4. Go to **Credentials** → **Create Credentials** → **OAuth client ID**
+5. Choose **Web application**
+6. Add authorized redirect URIs:
+   - For development: `https://your-project-id.supabase.co/auth/v1/callback`
+   - For production: `https://your-domain.com/auth/v1/callback`
+7. Note down your **Client ID** and **Client Secret**
+
+### Step 2: Configure Supabase
+1. In your Supabase dashboard, go to **Authentication → Providers**
+2. Find **Google** and toggle it on
+3. Enter your Google **Client ID** and **Client Secret**
+4. Save the configuration
+
+### Step 3: Test Google Sign-In
+- Users can now click "Continue with Google" to sign in
+- After authorization, they'll be redirected back to your app
+- The authentication state will be automatically managed
+
+## 5. Authentication Setup
+
+Authentication now supports:
+- ✅ **Email/password** sign up and sign in
+- ✅ **Google OAuth** one-click sign in
+- ✅ **Modal sign-in** from navigation
+- ✅ **Automatic session management**
 
 ## Next Steps
 
 - [ ] Add Stripe payment integration
-- [ ] Test the database setup
-- [ ] Configure email templates in Supabase 
+- [ ] Test Google OAuth flow
+- [ ] Configure email templates in Supabase
+- [ ] Set up production domain redirects 
