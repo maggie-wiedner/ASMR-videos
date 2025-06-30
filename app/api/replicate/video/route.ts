@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '../../../lib/supabase-admin';
+import { supabaseAdmin } from '../../../../lib/supabase-admin';
 
 export async function POST(req: NextRequest) {
   const { enhancedPrompt, userId, originalPrompt } = await req.json();

@@ -69,20 +69,49 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## API Endpoints
 
-- `POST /api/enhance` - Enhance prompts with OpenAI
-- `POST /api/generate` - Start video generation with Veo3
-- `GET /api/status?id={predictionId}` - Check generation status
+### OpenAI Content Generation
+- `POST /api/openai/enhance-project` - Analyze user input and generate project metadata
+- `POST /api/openai/generate-prompts` - Generate 9 cohesive ASMR prompts using project context
+
+### Supabase Database Operations
+- `GET/POST/PUT/DELETE /api/supabase/projects` - Project CRUD operations
+- `GET /api/supabase/prompts/saved` - Retrieve saved prompts with filtering
+- `PATCH /api/supabase/prompts/update` - Update prompt properties (favorites, used status)
+
+### Replicate AI Integration
+- `POST /api/replicate/video` - Start video generation with Veo3
+- `POST /api/replicate/image` - Generate preview images with Imagen 4
+- `GET /api/replicate/status?id={predictionId}` - Check generation status
+
+### Payment Processing
+- `POST /api/stripe/create-checkout-session` - Create Stripe checkout for wallet funding
+- `POST /api/stripe/verify-payment` - Verify and process completed payments
+- `POST /api/stripe/confirm-payment` - Confirm payment and update wallet
 
 ## Project Structure
 
 ```
 app/
-├── page.tsx              # Main React component
+├── page.tsx                                    # Main landing page
+├── studio/                                     # ASMR studio interface
+│   ├── page.tsx                               # Studio dashboard
+│   ├── components/                            # Studio-specific components
+│   └── project/[projectId]/                  # Project detail pages
 ├── api/
-│   ├── enhance/route.ts  # OpenAI prompt enhancement
-│   ├── generate/route.ts # Veo3 video generation
-│   └── status/route.ts   # Status polling
-└── globals.css           # Global styles
+│   ├── openai/                                # OpenAI content generation
+│   │   ├── enhance-project/route.ts           # Project analysis
+│   │   └── generate-prompts/route.ts          # Cohesive prompt generation
+│   ├── supabase/                              # Database operations
+│   │   ├── projects/route.ts                  # Project CRUD
+│   │   └── prompts/                           # Prompt management
+│   ├── replicate/                             # AI generation services
+│   │   ├── video/route.ts                     # Veo3 video generation
+│   │   ├── image/route.ts                     # Imagen 4 images
+│   │   └── status/route.ts                    # Generation status
+│   └── stripe/                                # Payment processing
+├── components/                                # Shared components
+├── lib/                                       # Utilities and configs
+└── globals.css                                # Global styles
 ```
 
 ## Debugging

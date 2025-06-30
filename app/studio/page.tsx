@@ -42,6 +42,7 @@ export default function StudioPage() {
   const [selectedPrompt, setSelectedPrompt] = useState<EnhancedPrompt | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [projectMetadata, setProjectMetadata] = useState<any>(null);
   
   // Saved prompts state
   const [savedPrompts, setSavedPrompts] = useState<SavedPrompt[]>([]);
@@ -129,7 +130,7 @@ export default function StudioPage() {
 
     const pollStatus = async () => {
       try {
-        const response = await fetch(`/api/status?id=${predictionId}`);
+        const response = await fetch(`/api/replicate/status?id=${predictionId}`);
         const data = await response.json();
         
         setVideoStatus(data.status);
@@ -165,7 +166,7 @@ export default function StudioPage() {
     setVideoStatus(null);
 
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/replicate/video', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -218,63 +219,85 @@ export default function StudioPage() {
     setEnhancedPrompts([]);
     setSelectedPrompt(null);
     setDebugInfo(null);
+    setProjectMetadata(null);
     
     // Clear video states when starting fresh
     setVideoOutput(null);
     setVideoError(null);
     setPredictionId(null);
 
-    console.log('🔄 Starting prompt enhancement for:', prompt);
+    console.log('🔄 Starting two-step enhancement for:', prompt);
 
     try {
-      const response = await fetch('/api/enhance', {
+      // Step 1: Enhance project metadata
+      console.log('📋 Step 1: Generating project metadata...');
+              const projectResponse = await fetch('/api/openai/enhance-project', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const projectData = await projectResponse.json();
+      
+      if (!projectResponse.ok) {
+        console.error('❌ Project enhancement failed:', projectData);
+        setError(projectData.error || 'Failed to analyze project');
+        setDebugInfo(projectData.debug);
+        return;
+      }
+
+      console.log('✅ Project metadata generated:', projectData.projectMetadata);
+      setProjectMetadata(projectData.projectMetadata);
+
+      // Step 2: Generate prompts using project metadata
+      console.log('📝 Step 2: Generating prompts with project context...');
+              const promptsResponse = await fetch('/api/openai/generate-prompts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           prompt,
+          projectMetadata: projectData.projectMetadata,
           userId: user?.id
         }),
       });
 
-      console.log('📡 API Response status:', response.status);
-      console.log('📡 API Response ok:', response.ok);
-
-      const data = await response.json();
-      console.log('📦 Raw API response data:', data);
+      const promptsData = await promptsResponse.json();
       
-      if (!response.ok) {
-        console.error('❌ API request failed:', data);
-        setError(data.error || 'Failed to enhance prompt');
-        setDebugInfo(data.debug);
+      if (!promptsResponse.ok) {
+        console.error('❌ Prompt generation failed:', promptsData);
+        setError(promptsData.error || 'Failed to generate prompts');
+        setDebugInfo(promptsData.debug);
       } else {
-        console.log('✅ API request successful');
-        console.log('📝 Enhanced prompts received:', data.enhancedPrompts);
-        console.log('📊 Number of prompts:', data.enhancedPrompts?.length || 0);
+        console.log('✅ Prompts generated successfully');
+        console.log('📝 Enhanced prompts received:', promptsData.enhancedPrompts);
+        console.log('📊 Number of prompts:', promptsData.enhancedPrompts?.length || 0);
         
-        if (data.enhancedPrompts && Array.isArray(data.enhancedPrompts)) {
-          console.log('🎯 First prompt sample:', data.enhancedPrompts[0]);
-          console.log('💾 Saved to database:', data.debug?.savedToDatabase);
-          setEnhancedPrompts(data.enhancedPrompts);
+        if (promptsData.enhancedPrompts && Array.isArray(promptsData.enhancedPrompts)) {
+          console.log('🎯 First prompt sample:', promptsData.enhancedPrompts[0]);
+          console.log('💾 Saved to database:', promptsData.debug?.savedToDatabase);
+          setEnhancedPrompts(promptsData.enhancedPrompts);
           
-                      // Refresh projects list if we saved new ones
-            if (data.projectId && projects.length >= 0) {
-              fetchProjects();
-            }
+          // Refresh projects list if we saved new ones
+          if (promptsData.projectId && projects.length >= 0) {
+            fetchProjects();
+          }
         } else {
-          console.error('❌ enhancedPrompts is not an array:', typeof data.enhancedPrompts);
+          console.error('❌ enhancedPrompts is not an array:', typeof promptsData.enhancedPrompts);
           setError('Invalid response format from server');
         }
         
-        setDebugInfo(data.debug);
+        setDebugInfo(promptsData.debug);
       }
     } catch (err: any) {
       console.error('💥 Network error occurred:', err);
       setError('Network error: ' + err.message);
     } finally {
       setIsLoading(false);
-      console.log('🏁 Prompt enhancement process completed');
+      console.log('🏁 Two-step enhancement process completed');
     }
   };
 
@@ -293,7 +316,7 @@ export default function StudioPage() {
         );
         if (matchingPrompt && !matchingPrompt.used_for_video) {
           try {
-            await fetch('/api/update-prompt', {
+            await fetch('/api/supabase/prompts/update', {
               method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json',
@@ -326,7 +349,7 @@ export default function StudioPage() {
     setLoadingProjects(true);
     try {
       console.log('📚 Fetching projects...');
-      const response = await fetch(`/api/projects?userId=${user.id}`);
+      const response = await fetch(`/api/supabase/projects?userId=${user.id}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -395,6 +418,27 @@ export default function StudioPage() {
           <div className="p-4 bg-red-50 border border-red-200 rounded">
             <h3 className="font-semibold text-red-800 mb-2">Error:</h3>
             <p className="text-red-700">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Project Metadata Display */}
+      {user && projectMetadata && enhancedPrompts.length > 0 && !selectedPrompt && (
+        <div className="w-full max-w-4xl mb-8">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                🎨 Generated Project: "{projectMetadata.title}"
+              </h3>
+              <p className="text-gray-600 leading-relaxed mb-3">
+                {projectMetadata.description}
+              </p>
+              {projectMetadata.theme && (
+                <div className="text-sm text-gray-500 italic border-t border-blue-200 pt-3">
+                  <strong>Creative Direction:</strong> {projectMetadata.theme}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

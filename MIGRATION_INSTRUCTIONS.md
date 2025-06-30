@@ -40,8 +40,9 @@ After running the migration, verify that:
 - **Enhanced relationships**: Prompts belong to both sessions and projects
 
 ### API Updates
-- **New `/api/projects` endpoint**: Full CRUD operations for projects
-- **Updated `/api/enhance` endpoint**: Now creates/links to projects
+- **New `/api/supabase/projects` endpoint**: Full CRUD operations for projects
+- **New `/api/openai/enhance-project` endpoint**: Analyzes user input to generate project metadata
+- **New `/api/openai/generate-prompts` endpoint**: Creates cohesive prompts using project context
 - **Project-aware prompt management**: All prompts are now organized by project
 
 ### UI/UX Changes

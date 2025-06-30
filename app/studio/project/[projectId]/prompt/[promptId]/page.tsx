@@ -47,7 +47,7 @@ export default function PromptDetailPage() {
       setIsLoading(true);
       try {
         // Fetch project details first
-        const projectResponse = await fetch(`/api/projects?userId=${user.id}&projectId=${projectId}`);
+        const projectResponse = await fetch(`/api/supabase/projects?userId=${user.id}&projectId=${projectId}`);
         const projectData = await projectResponse.json();
 
         if (projectResponse.ok && projectData.project) {
@@ -89,7 +89,7 @@ export default function PromptDetailPage() {
     setGeneratedImage(null);
 
     try {
-      const response = await fetch('/api/generate-image', {
+      const response = await fetch('/api/replicate/image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -74,7 +74,7 @@ export default function ProjectPage() {
     const fetchProject = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/projects?userId=${user.id}&projectId=${projectId}`);
+        const response = await fetch(`/api/supabase/projects?userId=${user.id}&projectId=${projectId}`);
         const data = await response.json();
 
         if (response.ok && data.project) {
@@ -111,7 +111,7 @@ export default function ProjectPage() {
 
     const pollStatus = async () => {
       try {
-        const response = await fetch(`/api/status?id=${predictionId}`);
+        const response = await fetch(`/api/replicate/status?id=${predictionId}`);
         const data = await response.json();
         
         setVideoStatus(data.status);
@@ -146,7 +146,7 @@ export default function ProjectPage() {
     setVideoStatus(null);
 
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch('/api/replicate/video', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ export default function ProjectPage() {
         
         if (matchingPrompt && !matchingPrompt.used_for_video) {
           try {
-            await fetch('/api/update-prompt', {
+            await fetch('/api/supabase/prompts/update', {
               method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json',
@@ -250,16 +250,19 @@ export default function ProjectPage() {
     setIsLoading(true);
     setError(null);
     
-    console.log('🔄 Starting prompt enhancement for project:', projectId);
+    console.log('🔄 Starting prompt enhancement for existing project:', projectId);
 
     try {
-      const response = await fetch('/api/enhance', {
+      // For existing projects, we can skip project metadata generation
+      // and go straight to prompt generation with existing project context
+      const response = await fetch('/api/openai/generate-prompts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           prompt,
+          projectMetadata: null, // Let it use fallback for existing projects
           userId: user?.id,
           projectId: projectId
         }),
@@ -269,9 +272,9 @@ export default function ProjectPage() {
       
       if (!response.ok) {
         console.error('❌ API request failed:', data);
-        setError(data.error || 'Failed to enhance prompt');
+        setError(data.error || 'Failed to generate prompts');
       } else {
-        console.log('✅ API request successful');
+        console.log('✅ Prompts generated successfully');
         
         if (data.enhancedPrompts && Array.isArray(data.enhancedPrompts)) {
           // Refresh the project data to show the new session
@@ -345,6 +348,25 @@ export default function ProjectPage() {
           />
         )}
       </div>
+
+      {/* Project Info */}
+      {!showNewPromptForm && !selectedPrompt && project && (
+        <div className="w-full max-w-6xl mb-8">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{project.name}</h1>
+                {project.description && (
+                  <p className="text-gray-600 leading-relaxed">{project.description}</p>
+                )}
+              </div>
+              <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
+                Created {new Date(project.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Enhanced Prompts Overview */}
       {!showNewPromptForm && !selectedPrompt && (
