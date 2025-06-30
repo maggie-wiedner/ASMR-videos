@@ -38,7 +38,7 @@ function SuccessPageContent() {
 
       try {
         // Verify payment with our backend
-        const response = await fetch('/api/verify-payment', {
+        const response = await fetch('/api/stripe/verify-payment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

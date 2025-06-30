@@ -10,10 +10,14 @@ const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get('userId');
+  const sessionId = searchParams.get('sessionId');
   const limit = parseInt(searchParams.get('limit') || '50');
   const favoritedOnly = searchParams.get('favorited') === 'true';
 
   console.log('📚 Fetching saved prompts for user:', userId);
+  if (sessionId) {
+    console.log('🎯 Filtering by session:', sessionId);
+  }
 
   if (!userId) {
     console.error('❌ No userId provided');
@@ -27,6 +31,10 @@ export async function GET(req: NextRequest) {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
+
+    if (sessionId) {
+      query = query.eq('session_id', sessionId);
+    }
 
     if (favoritedOnly) {
       query = query.eq('is_favorited', true);

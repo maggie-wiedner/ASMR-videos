@@ -30,7 +30,7 @@ function PaymentFormInner({ enhancedPrompt, userId, onSuccess, onCancel }: Payme
   useEffect(() => {
     const createPaymentIntent = async () => {
       try {
-        const response = await fetch('/api/create-payment-intent', {
+        const response = await fetch('/api/stripe/create-payment-intent', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ function PaymentFormInner({ enhancedPrompt, userId, onSuccess, onCancel }: Payme
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
       // Confirm payment on our backend
       try {
-        const response = await fetch('/api/confirm-payment', {
+        const response = await fetch('/api/stripe/confirm-payment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

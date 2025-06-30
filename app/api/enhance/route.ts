@@ -8,9 +8,10 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
 export async function POST(req: NextRequest) {
-  const { prompt, userId } = await req.json();
+  const { prompt, userId, projectId } = await req.json();
   console.log('🚀 API received prompt:', prompt);
   console.log('👤 User ID:', userId);
+  console.log('📁 Project ID:', projectId);
   
   if (!prompt) {
     console.error('❌ No prompt provided');
@@ -161,21 +162,55 @@ Make each prompt cinematic, emotionally resonant, and immediately engaging. Retu
       // Save individual prompts to database if user is provided
       let savedPromptCount = 0;
       let sessionId: string | null = null;
+      let finalProjectId: string | null = projectId;
+      
       if (userId) {
         try {
           console.log('💾 Saving individual prompts to database...');
+          
+          // Handle project creation/linking
+          if (!finalProjectId) {
+            // Auto-generate a project name based on the prompt
+            const projectName = prompt.length > 50 ? `${prompt.substring(0, 47)}...` : prompt;
+            console.log('📁 Creating new project:', projectName);
+            const { data: newProject, error: projectError } = await supabase
+              .from('projects')
+              .insert({
+                user_id: userId,
+                name: projectName,
+                description: `ASMR project: ${prompt}`
+              })
+              .select()
+              .single();
+
+            if (projectError) {
+              console.error('❌ Failed to create project:', projectError);
+            } else {
+              finalProjectId = newProject.id;
+              console.log('✅ Created new project:', finalProjectId);
+            }
+          } else if (finalProjectId) {
+            console.log('📁 Using existing project:', finalProjectId);
+            // Update project's updated_at timestamp
+            await supabase
+              .from('projects')
+              .update({ updated_at: new Date().toISOString() })
+              .eq('id', finalProjectId)
+              .eq('user_id', userId);
+          }
           
           // Generate a session ID to group these prompts together
           sessionId = crypto.randomUUID();
           console.log('🆔 Session ID:', sessionId);
           
-          // Insert all prompts with the same session ID
-          const promptsToInsert = validPrompts.map(prompt => ({
+          // Insert all prompts with the same session ID and project ID
+          const promptsToInsert = validPrompts.map(enhancedPrompt => ({
             user_id: userId,
             session_id: sessionId,
-            original_prompt: prompt,
-            title: prompt.title,
-            description: prompt.description,
+            project_id: finalProjectId,
+            original_prompt: prompt, // Use the original user input, not the enhanced prompt
+            title: enhancedPrompt.title,
+            description: enhancedPrompt.description,
             is_favorited: false,
             used_for_video: false
           }));
@@ -199,13 +234,15 @@ Make each prompt cinematic, emotionally resonant, and immediately engaging. Retu
       return NextResponse.json({ 
         enhancedPrompts: validPrompts, 
         sessionId: sessionId,
+        projectId: finalProjectId,
         savedPromptCount: savedPromptCount,
         debug: { 
           ...data, 
           originalResponse: enhanced,
           cleanedResponse: cleanedResponse,
           validPromptsCount: validPrompts.length,
-          savedToDatabase: savedPromptCount > 0
+          savedToDatabase: savedPromptCount > 0,
+          projectCreated: !projectId && !!finalProjectId
         } 
       });
     } catch (parseError) {
