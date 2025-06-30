@@ -16,9 +16,10 @@ REPLICATE_API_TOKEN=your_replicate_api_token_here
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 
-# Stripe Configuration (for payments) - Coming soon!
-# STRIPE_SECRET_KEY=your_stripe_secret_key_here
-# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key_here
+# Stripe Configuration (REQUIRED for payments to work)
+# Get these from your Stripe dashboard -> Developers -> API keys
+STRIPE_SECRET_KEY=your_stripe_secret_key_here
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key_here
 ```
 
 ## 2. Supabase Database Setup
@@ -118,9 +119,95 @@ Authentication now supports:
 - ✅ **Modal sign-in** from navigation
 - ✅ **Automatic session management**
 
+## 6. Stripe Payment Setup (REQUIRED)
+
+The "Purchase Access" button requires Stripe to be configured:
+
+### Step 1: Create Stripe Account
+1. Go to [Stripe Dashboard](https://dashboard.stripe.com/register)
+2. Create an account or sign in to existing one
+
+### Step 2: Get API Keys
+1. In your Stripe dashboard, go to **Developers → API keys**
+2. Copy your **Publishable key** (starts with `pk_`)
+3. Copy your **Secret key** (starts with `sk_`)
+
+### Step 3: Add to Environment Variables
+1. Create a `.env.local` file in your project root
+2. Add ALL required environment variables:
+```env
+# Stripe Configuration (REQUIRED for payments)
+STRIPE_SECRET_KEY=sk_test_your_secret_key_here
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
+
+# Supabase Configuration (REQUIRED for database)
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# Optional: For enhanced prompt features
+OPENAI_API_KEY=your_openai_api_key_here
+REPLICATE_API_TOKEN=your_replicate_api_token_here
+```
+
+### Step 4: Restart Development Server
+```bash
+npm run dev
+```
+
+**Note**: Without these environment variables, the payment flow will not work!
+
+## 7. Troubleshooting
+
+### "Purchase Access" Button Not Working
+
+If clicking the button does nothing or shows errors:
+
+1. **Check Browser Console**: Open Developer Tools → Console for detailed error messages
+2. **Verify Environment Variables**: Ensure `.env.local` has all required values
+3. **Restart Development Server**: After adding environment variables, restart with `npm run dev`
+
+### Common Error Messages
+
+- **"Stripe configuration error"**: Missing or invalid `STRIPE_SECRET_KEY`
+- **"Database error"**: Missing or invalid Supabase configuration
+- **"Error recording payment: {}"**: Supabase database tables not created (run SQL from Step 2)
+
+### Testing Payment Flow
+
+1. Use Stripe test cards: `4242 4242 4242 4242` (any future date, any CVC)
+2. Check Stripe Dashboard → Payments to verify test transactions
+3. Check Supabase → Table Editor → `payments` table for recorded payments
+
 ## Next Steps
 
-- [ ] Add Stripe payment integration
+- [x] Add Stripe payment integration
 - [ ] Test Google OAuth flow
 - [ ] Configure email templates in Supabase
-- [ ] Set up production domain redirects 
+- [ ] Set up production domain redirects
+
+# ASMR Video Generator Setup
+
+## Database Setup
+
+### Individual Prompt Storage
+
+The database has been set up with a `user_prompts` table for storing individual generated prompts. Each prompt is saved individually with session grouping, favorites, and usage tracking.
+
+## Environment Variables
+
+Make sure you have these environment variables set:
+
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anon key  
+- `SUPABASE_SERVICE_ROLE_KEY` - Your Supabase service role key (for server-side operations)
+- `OPENAI_API_KEY` - Your OpenAI API key
+
+## Features
+
+### Individual Prompt Storage
+- Each generated prompt is saved individually to the database
+- Prompts are grouped by generation session for easy browsing
+- Users can favorite individual prompts they love
+- Track which prompts were used to generate videos
+- Advanced filtering and search capabilities
+- Prompts are associated with user accounts via RLS policies 

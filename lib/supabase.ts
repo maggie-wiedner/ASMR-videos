@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+// Client-side supabase client (with RLS)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Types for our database
@@ -70,6 +71,41 @@ export type Database = {
           amount?: number
           status?: 'pending' | 'completed' | 'failed'
           video_id?: string | null
+          created_at?: string
+        }
+      }
+      user_prompts: {
+        Row: {
+          id: string
+          user_id: string
+          session_id: string
+          original_prompt: string
+          title: string
+          description: string
+          is_favorited: boolean
+          used_for_video: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          session_id: string
+          original_prompt: string
+          title: string
+          description: string
+          is_favorited?: boolean
+          used_for_video?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          session_id?: string
+          original_prompt?: string
+          title?: string
+          description?: string
+          is_favorited?: boolean
+          used_for_video?: boolean
           created_at?: string
         }
       }
